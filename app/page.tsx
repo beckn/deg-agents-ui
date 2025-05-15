@@ -5,6 +5,7 @@ import type React from "react";
 import { useState, useRef, useEffect } from "react";
 import { Camera, Mic, ChevronLeft, Video, Smile } from "lucide-react";
 import Image from "next/image";
+import { webhookCache } from '@/app/utils/cache'
 
 type Message = {
   id: string;
@@ -22,10 +23,109 @@ export default function Home() {
   const [isTyping, setIsTyping] = useState(false);
   const [isUppercase, setIsUppercase] = useState(true);
   const [isNumeric, setIsNumeric] = useState(false);
+  const [lastPollTime, setLastPollTime] = useState<number>(0);
+  const [hasShownMessages, setHasShownMessages] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const checkWebhookData = async () => {
+      if (hasShownMessages) return;
+      
+      const cachedData = webhookCache.getAll();
+
+      console.log("Dank",cachedData);
+      
+      if (cachedData && cachedData.length > 0) {
+        const systemMessages: Message[] = [
+          {
+            id: `system-1-${Date.now()}`,
+            content: "Your household is consuming more energy",
+            sender: "agent",
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          },
+          {
+            id: `system-2-${Date.now() + 1}`,
+            content: "Since you are registered to the DFP program, we have subscribed you for the updates",
+            sender: "agent",
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          }
+        ];
+
+        setMessages(prev => [...prev, ...systemMessages]);
+        setHasShownMessages(true);
+      }
+    };
+
+    checkWebhookData();
+  }, [hasShownMessages]);
+
+  useEffect(() => {
+    const pollInterval = 5000;
+
+    const pollWebhook = async () => {
+      if (hasShownMessages) return;
+      
+      try {
+        const response = await fetch('/api/webhook', {
+          method: 'GET',
+        });
+
+        if (!response.ok) {
+          console.error('Polling failed:', response.status);
+          return;
+        }
+
+        const data = await response.json();
+        
+        // Only show messages if we actually have cached data
+        if (data.data && data.data.length > 0) {
+          const currentTime = Date.now();
+          
+          const systemMessages: Message[] = [
+            {
+              id: `system-1-${currentTime}`,
+              content: "Your household is consuming more energy",
+              sender: "agent",
+              timestamp: new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            },
+            {
+              id: `system-2-${currentTime + 1}`,
+              content: "Since you are registered to the DFP program, we have subscribed you for the updates",
+              sender: "agent",
+              timestamp: new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            }
+          ];
+
+          setMessages(prev => [...prev, ...systemMessages]);
+          setHasShownMessages(true);
+          setLastPollTime(currentTime);
+          return;
+        }
+      } catch (error) {
+        console.error('Error polling webhook:', error);
+      }
+    };
+
+    if (!hasShownMessages) {
+      const pollTimer = setInterval(pollWebhook, pollInterval);
+      return () => clearInterval(pollTimer);
+    }
+  }, [lastPollTime, hasShownMessages]);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
