@@ -54,7 +54,7 @@ export default function Home() {
 
     // Send agent response after a delay
     try {
-      const response = await fetch("http://localhost:8000/chat", {
+      const response = await fetch(process.env.NEXT_PUBLIC_CHAT_API_URL! + "/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
