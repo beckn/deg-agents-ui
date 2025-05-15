@@ -1,445 +1,309 @@
 "use client";
-
-import type React from "react";
-
-import { useState, useRef, useEffect } from "react";
-import { Camera, Mic, ChevronLeft, Video, Smile } from "lucide-react";
-import Image from "next/image";
-
-type Message = {
-  id: string;
-  content: string | React.ReactNode;
-  sender: "user" | "agent";
-  timestamp?: string;
-};
+import { useState } from "react";
+import { GiRadioTower } from "react-icons/gi";
+import { SlEnergy } from "react-icons/sl";
+import { IoHomeOutline } from "react-icons/io5";
+import { PiCarBatteryDuotone } from "react-icons/pi";
 
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [clientId, setClientId] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [activeTab, setActiveTab] = useState("feeder"); // 'feeder' or 'audit'
 
-  const [inputValue, setInputValue] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const [isUppercase, setIsUppercase] = useState(true);
-  const [isNumeric, setIsNumeric] = useState(false);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!inputValue.trim()) return;
-    if (!clientId.trim()) {
-      alert("Please enter a Client ID.");
-      return;
-    }
-
-    const userMessage = {
-      id: Date.now().toString(),
-      content: inputValue,
-      sender: "user" as const,
-      timestamp: `Read ${new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`,
-    };
-
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    const currentInput = inputValue;
-    setInputValue("");
-
-    // Simulate agent typing
-    setIsTyping(true);
-
-    // Send agent response after a delay
-    try {
-      const response = await fetch("http://localhost:8000/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query: currentInput, client_id: clientId }),
-      });
-
-      setIsTyping(false);
-
-      if (!response.ok) {
-        console.error("API error:", response.status, await response.text());
-        const errorMessage = {
-          id: (Date.now() + 1).toString(),
-          content: "Sorry, I couldn't get a response. Please try again.",
-          sender: "agent" as const,
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (data && data.message) {
-        const agentMessage = {
-          id: (Date.now() + 1).toString(),
-          content: data.message,
-          sender: "agent" as const,
-        };
-        setMessages((prev) => [...prev, agentMessage]);
-      } else {
-        console.error("Unexpected API response structure:", data);
-        const errorMessage = {
-          id: (Date.now() + 1).toString(),
-          content:
-            "Sorry, I received an unexpected response. Please try again.",
-          sender: "agent" as const,
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-      }
-    } catch (error) {
-      setIsTyping(false);
-      console.error("Failed to send message or fetch response:", error);
-      const errorMessage = {
-        id: (Date.now() + 1).toString(),
-        content:
-          "An error occurred. Please check your connection and try again.",
-        sender: "agent" as const,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    }
-  };
-
-  // Separate handler for shift (⇧)
-  const handleShiftPress = () => {
-    setIsUppercase((prev) => !prev);
-  };
-
-  // Separate handler for 123 (numeric toggle)
-  const handleNumericPress = () => {
-    setIsNumeric((prev) => !prev);
-    setIsUppercase(true); // reset to uppercase when toggling
-  };
-
-  // Separate handler for clear (⌫)
-  const handleClearPress = () => {
-    setInputValue((prev) => prev.slice(0, -1));
-  };
-
-  // Generic key press handler
-  const handleKeyPress = (key: string) => {
-    if (key === "return") {
-      handleSendMessage();
-    } else if (key === "⌫") {
-      handleClearPress();
-    } else if (key === "space") {
-      setInputValue((prev) => prev + " ");
-    } else if (key === "123") {
-      handleNumericPress();
-    } else if (key === "⇧") {
-      handleShiftPress();
-    } else {
-      setInputValue((prev) => prev + key);
-    }
-  };
-
-  // Keyboard layouts
-  const letterRows = [
-    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-    ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-    ["Z", "X", "C", "V", "B", "N", "M"],
+  // Tab options for the map filter
+  const tabOptions = [
+    { key: "all", label: "All" },
+    { key: "substations", label: "Substations", icon: <GiRadioTower size={20} /> },
+    { key: "feeders", label: "Feeders", icon: <SlEnergy size={20} /> },
+    { key: "households", label: "Households", icon: <IoHomeOutline size={20} /> },
+    { key: "ders", label: "DER's", icon: <PiCarBatteryDuotone size={20} /> },
   ];
-  const numberRows = [
-    ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
-    ["@", "#", "$", "_", "&", "-", "+", "(", ")", "/"],
-    ["*", '"', "'", ":", ";", "!", "?"],
-  ];
+  const [activeMapTab, setActiveMapTab] = useState("all");
 
-  return (
-    <div className="flex h-screen ">
-      {/* Left sidebar */}
-      {/* <div className="w-2 md:w-16 bg-blue-900 border-r border-blue-800"></div> */}
-
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col ">
-        {/* Header */}
-        <header className="bg-[#F9F9F9F0] text-[#007AFF] p-4 border-b flex items-center justify-between">
-          <ChevronLeft className="h-6 w-6 mr-2" />
-          <div className="flex items-center flex-grow">
-            <div className="flex items-center flex-col mr-4">
-              <Image
-                src="/AIBotAvatar.svg"
-                alt="Solarization Agent"
-                width={50}
-                height={50}
-                className="rounded-full mr-2"
-              />
-              <span className="text-[11px] mt-2 text-center font-['SF_Pro_Text'] font-normal leading-[13px] tracking-[0.066px] text-[#000]">
-                Solarization Agent &gt;
-              </span>
-            </div>
-            <input
-              type="text"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              placeholder="Enter Client ID"
-              className="border px-3 py-2 rounded-md flex-grow max-w-xs"
-            />
-          </div>
-          <Video className="h-6 w-6 ml-2" />
-        </header>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 bg-[#fff]">
-          <div className="max-w-3xl mx-auto space-y-3">
-            {messages.map((message) => (
-              <div key={message.id} className="flex flex-col">
-                <div
-                  className={`rounded-2xl p-3 max-w-[85%] ${
-                    message.sender === "user"
-                      ? "bg-blue-500 text-white self-end"
-                      : "bg-gray-100 text-gray-800 self-start"
-                  }`}
-                  style={
-                    message.sender === "agent" ? { whiteSpace: "pre-line" } : {}
-                  }
-                >
-                  {message.content}
-                </div>
-                {message.timestamp && (
-                  <span
-                    className={`text-xs text-gray-500 mt-1 ${
-                      message.sender === "user"
-                        ? "self-end mr-1"
-                        : "self-start ml-1"
-                    }`}
-                  >
-                    {message.timestamp}
-                  </span>
-                )}
-              </div>
-            ))}
-
-            {isTyping && (
-              <div className="flex flex-col">
-                <div className="bg-gray-100 text-gray-800 rounded-2xl p-3 max-w-[85%] self-start">
-                  <div className="flex space-x-1">
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "0ms" }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* Input area */}
-        <form
-          onSubmit={handleSendMessage}
-          className="flex items-center p-2 bg-gray-100 justify-between"
-        >
-          <div className="flex items-center mb-2 mr-4 ml-4">
-            <Image
-              src={"/Camera.svg"}
-              alt="Solarization Agent"
-              width={38}
-              height={32}
-              className="mr-2"
-            />
-            <Image
-              src={"/Apps.svg"}
-              alt="Solarization Agent"
-              width={38}
-              height={32}
-              className="mr-2"
-            />
-            <div className=" flex items-center bg-white rounded-full border  px-3 py-2 justify-between w-[80vw] ">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="iMessage"
-                className="flex-1 outline-none bg-transparent"
-              />
-              <Mic className="h-5 w-5 text-gray-500 ml-2" />
-            </div>
-          </div>
-        </form>
-        <div className="bg-gray-100 border-t border-gray-300">
-          {/* App shortcuts */}
-          <div className="flex justify-around py-2 px-4 border-b border-gray-300">
-            {[
-              "/App0.svg",
-              "/App-1.svg",
-              "/App-2.svg",
-              "/App-3.svg",
-              "/App-4.svg",
-              "/App-5.svg",
-              "/App-6.svg",
-            ].map((emoji, index) => (
-              <div
-                key={index}
-                className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center"
-              >
-                <Image
-                  src={emoji}
-                  alt="Solarization Agent"
-                  width={32}
-                  height={32}
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* Keyboard */}
-          <div className="bg-gray-200">
-            {/* First row */}
-            <div className="flex justify-around py-1 keyword">
-              {isNumeric
-                ? numberRows[0].map((key) => (
-                    <button
-                      key={key}
-                      onClick={() => handleKeyPress(key)}
-                      className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
-                    >
-                      {key}
-                    </button>
-                  ))
-                : letterRows[0].map((key) => (
-                    <button
-                      key={key}
-                      onClick={() =>
-                        handleKeyPress(isUppercase ? key : key.toLowerCase())
-                      }
-                      className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
-                    >
-                      {isUppercase ? key : key.toLowerCase()}
-                    </button>
-                  ))}
-            </div>
-
-            {/* Second row */}
-            <div className="flex justify-around py-1 keyword">
-              {isNumeric
-                ? numberRows[1].map((key) => (
-                    <button
-                      key={key}
-                      onClick={() => handleKeyPress(key)}
-                      className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
-                    >
-                      {key}
-                    </button>
-                  ))
-                : letterRows[1].map((key) => (
-                    <button
-                      key={key}
-                      onClick={() =>
-                        handleKeyPress(isUppercase ? key : key.toLowerCase())
-                      }
-                      className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
-                    >
-                      {isUppercase ? key : key.toLowerCase()}
-                    </button>
-                  ))}
-            </div>
-
-            {/* Third row */}
-            <div className="flex justify-around py-1 keyword">
-              {isNumeric ? (
-                <>
-                  <button
-                    onClick={handleNumericPress}
-                    className="w-8 h-10 bg-gray-300 rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-400"
-                  >
-                    ABC
-                  </button>
-                  {numberRows[2].map((key) => (
-                    <button
-                      key={key}
-                      onClick={() => handleKeyPress(key)}
-                      className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
-                    >
-                      {key}
-                    </button>
-                  ))}
-                  <button
-                    onClick={handleClearPress}
-                    className="w-8 h-10 bg-gray-300 rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-400"
-                  >
-                    ⌫
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={handleShiftPress}
-                    className="w-8 h-10 bg-gray-300 rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-400"
-                  >
-                    ⇧
-                  </button>
-                  {letterRows[2].map((key) => (
-                    <button
-                      key={key}
-                      onClick={() =>
-                        handleKeyPress(isUppercase ? key : key.toLowerCase())
-                      }
-                      className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
-                    >
-                      {isUppercase ? key : key.toLowerCase()}
-                    </button>
-                  ))}
-                  <button
-                    onClick={handleClearPress}
-                    className="w-8 h-10 bg-gray-300 rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-400"
-                  >
-                    ⌫
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Fourth row */}
-            <div className="flex justify-around py-1 keyword">
-              <button
-                onClick={handleNumericPress}
-                className="w-16 h-10 bg-gray-300 rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-400"
-              >
-                {isNumeric ? "ABC" : "123"}
-              </button>
-              <button
-                onClick={() => handleKeyPress("space")}
-                className="flex-1 h-10 bg-white rounded-lg shadow flex items-center justify-center mx-1 my-0.5 active:bg-gray-300"
-              >
-                space
-              </button>
-              <button
-                onClick={() => handleKeyPress("return")}
-                className="w-16 h-10 bg-gray-300 rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-400"
-              >
-                return
-              </button>
-            </div>
-          </div>
-
-          {/* Message input */}
-          <div className="flex items-center p-2 bg-gray-100 justify-between">
-            <Smile className="h-6 w-6 text-gray-500 mx-2" />
-
-            <button type="submit" className="focus:outline-none">
-              <Mic className="h-6 w-6 text-gray-500 mx-2" />
-            </button>
-          </div>
-        </div>
+  // Feeder Summary UI
+  const FeederSummary = (
+    <div className="flex flex-col gap-3">
+      <div className="bg-[#7B8187] rounded-lg p-4">
+        <div className="text-white font-semibold text-base">Central Feeder Hub</div>
+        <div className="flex justify-between text-xs text-gray-200 mt-1"><span>Region</span><span>Central</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Current load</span><span>92 %</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Status</span><span className="bg-[#8B3A3A] text-white px-2 py-0.5 rounded">Critical</span></div>
+      </div>
+      <div className="bg-[#7B8187] rounded-lg p-4">
+        <div className="text-white font-semibold text-base">SoMA District Feeder</div>
+        <div className="flex justify-between text-xs text-gray-200 mt-1"><span>Region</span><span>North</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Current Load</span><span>70 %</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Status</span><span className="bg-[#F4B740] text-white px-2 py-0.5 rounded">Warning</span></div>
+      </div>
+      <div className="bg-[#7B8187] rounded-lg p-4">
+        <div className="text-white font-semibold text-base">Mission District Feeder</div>
+        <div className="flex justify-between text-xs text-gray-200 mt-1"><span>Region</span><span>West</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Current Load</span><span>80 %</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Status</span><span className="bg-[#F4B740] text-white px-2 py-0.5 rounded">Warning</span></div>
+      </div>
+      <div className="bg-[#7B8187] rounded-lg p-4">
+        <div className="text-white font-semibold text-base">Marina District Feeder</div>
+        <div className="flex justify-between text-xs text-gray-200 mt-1"><span>Region</span><span>East</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Current Load</span><span>50 %</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Status</span><span className="bg-[#4CAF50] text-white px-2 py-0.5 rounded">Normal</span></div>
+      </div>
+      <div className="bg-[#7B8187] rounded-lg p-4">
+        <div className="text-white font-semibold text-base">Sunset District Feeder</div>
+        <div className="flex justify-between text-xs text-gray-200 mt-1"><span>Region</span><span>Centre</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Current Load</span><span>30 %</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Status</span><span className="bg-[#4CAF50] text-white px-2 py-0.5 rounded">Normal</span></div>
       </div>
     </div>
   );
+
+  // Audit Trail UI
+  const AuditTrail = (
+    <div className="flex flex-col gap-3">
+      <div className="bg-[#384B7A] rounded-lg p-4">
+        <div className="flex justify-between items-center">
+          <div className="text-white font-semibold text-base">Central Feeder Hub</div>
+          <div className="text-xs text-gray-200">04:46 PM</div>
+        </div>
+        <div className="flex justify-between text-xs text-blue-200 mt-1"><span>Active (Fallback)</span><span className="bg-[#2B3A5A] text-white px-2 py-0.5 rounded">Tier 2</span></div>
+        <div className="flex justify-between text-xs text-gray-200 mt-1"><span>Load Reduction</span><span>15%</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Duration</span><span>60 min</span></div>
+      </div>
+      <div className="bg-[#8A7A3A] rounded-lg p-4">
+        <div className="flex justify-between items-center">
+          <div className="text-white font-semibold text-base">SoMA District Feeder</div>
+          <div className="text-xs text-gray-200">04:46 PM</div>
+        </div>
+        <div className="flex justify-between text-xs text-yellow-200 mt-1"><span>Pending</span><span className="bg-[#6B5A2A] text-white px-2 py-0.5 rounded">Tier 2</span></div>
+        <div className="flex justify-between text-xs text-gray-200 mt-1"><span>Load Reduction</span><span>10%</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Duration</span><span>30 min</span></div>
+      </div>
+      <div className="bg-[#8A7A3A] rounded-lg p-4">
+        <div className="flex justify-between items-center">
+          <div className="text-white font-semibold text-base">Mission District Feeder</div>
+          <div className="text-xs text-gray-200">04:46 PM</div>
+        </div>
+        <div className="flex justify-between text-xs text-yellow-200 mt-1"><span>Pending</span><span className="bg-[#6B5A2A] text-white px-2 py-0.5 rounded">Tier 2</span></div>
+        <div className="flex justify-between text-xs text-gray-200 mt-1"><span>Load Reduction</span><span>10%</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Duration</span><span>30 min</span></div>
+      </div>
+      <div className="bg-[#4A7A3A] rounded-lg p-4">
+        <div className="flex justify-between items-center">
+          <div className="text-white font-semibold text-base">Mission District Feeder</div>
+          <div className="text-xs text-gray-200">04:46 PM</div>
+        </div>
+        <div className="flex justify-between text-xs text-green-200 mt-1"><span>Completed</span><span className="bg-[#2A5A3A] text-white px-2 py-0.5 rounded">Tier 2</span></div>
+        <div className="flex justify-between text-xs text-gray-200 mt-1"><span>Load Reduction</span><span>10%</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Duration</span><span>30 min</span></div>
+      </div>
+      <div className="bg-[#4A7A3A] rounded-lg p-4">
+        <div className="flex justify-between items-center">
+          <div className="text-white font-semibold text-base">Sunset District Feeder</div>
+          <div className="text-xs text-gray-200">04:46 PM</div>
+        </div>
+        <div className="flex justify-between text-xs text-green-200 mt-1"><span>Completed</span><span className="bg-[#2A5A3A] text-white px-2 py-0.5 rounded">Tier 2</span></div>
+        <div className="flex justify-between text-xs text-gray-200 mt-1"><span>Load Reduction</span><span>10%</span></div>
+        <div className="flex justify-between text-xs text-gray-200"><span>Duration</span><span>30 min</span></div>
+      </div>
+    </div>
+  );
+
+  // Login Page UI
+  const LoginPage = (
+    <div className="flex items-center justify-center min-h-screen bg-[#2E343A]">
+      <div className="bg-[#7B8187] bg-opacity-80 rounded-2xl border border-gray-300 shadow-lg p-10 w-full max-w-md flex flex-col items-center">
+        <div className="mb-6 flex flex-col items-center">
+          <div className="bg-white bg-opacity-10 rounded-full p-4 mb-2">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2V6M12 18V22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M2 12H6M18 12H22M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h2 className="text-white text-center" style={{ fontSize: '18px', fontWeight: 700 }}>Utility<br/>Administration Portal</h2>
+        </div>
+        <form className="w-full flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
+            <label className="text-white mb-1 ml-2" htmlFor="email" style={{ fontSize: '12px', fontWeight: 500 }}>Email ID</label>
+            <input id="email" type="email" placeholder="" className="w-full rounded-2xl border-2 border-gray-200 bg-transparent text-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 font-semibold placeholder-white placeholder:font-bold placeholder:text-2xl" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-white mb-1 ml-2" htmlFor="password" style={{ fontSize: '12px', fontWeight: 500 }}>Password</label>
+            <input id="password" type="password" placeholder="" className="w-full rounded-2xl border-2 border-gray-200 bg-transparent text-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 font-semibold placeholder-white placeholder:font-bold placeholder:text-2xl" />
+            <div className="flex justify-end mt-1">
+              <button type="button" className="text-sm text-gray-200 hover:underline font-semibold">Forgot Password?</button>
+            </div>
+          </div>
+          <button type="button" onClick={() => setIsLoggedIn(true)} className="w-full mt-2 bg-gray-200 text-white py-3 rounded-2xl font-semibold text-sm hover:bg-gray-300 border-2 border-gray-200">Sign In</button>
+          <button type="button" className="w-full border-2 border-gray-200 text-white py-3 rounded-2xl font-semibold text-sm mt-2 bg-transparent hover:bg-gray-100 hover:text-gray-700 transition">New User? Sign Up</button>
+        </form>
+      </div>
+    </div>
+  );
+
+  // Dashboard Page UI
+  const DashboardPage = (
+    <div className="min-h-screen bg-[#2E343A] flex flex-col">
+      {/* Header with hamburger */}
+      <header className="bg-[#454B52] flex items-center px-8 py-4 justify-between">
+        <div className="flex items-center gap-4">
+          {/* Hamburger menu */}
+          <button className="focus:outline-none">
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
+              <line x1="4" y1="7" x2="20" y2="7" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="4" y1="12" x2="20" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="4" y1="17" x2="20" y2="17" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+          <div className="text-white text-lg font-semibold">Utility Admin Dashboard</div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-orange-300 flex items-center justify-center">
+            <span role="img" aria-label="avatar">👤</span>
+          </div>
+        </div>
+      </header>
+      <main className="flex-1 flex flex-row items-start justify-center p-8 gap-6">
+        {/* Left Panel with Tabs */}
+        <div className="w-[320px] bg-[#454B52] bg-opacity-80 rounded-xl p-4 flex flex-col gap-2 min-w-[270px] h-[calc(100vh-120px)]">
+          <div className="flex gap-2 mb-2">
+            <button
+              className={`px-3 py-1 rounded text-xs font-semibold ${activeTab === "feeder" ? "bg-blue-600 text-white" : "bg-[#454B52] text-white"}`}
+              onClick={() => setActiveTab("feeder")}
+            >
+              Feeder Summary
+            </button>
+            <button
+              className={`px-3 py-1 rounded text-xs font-semibold ${activeTab === "audit" ? "bg-blue-600 text-white" : "bg-[#454B52] text-white"}`}
+              onClick={() => setActiveTab("audit")}
+            >
+              Audit Trail
+            </button>
+          </div>
+          <div className="overflow-y-auto max-h-[calc(100vh-180px)] pr-1">
+            {activeTab === "feeder" ? FeederSummary : AuditTrail}
+          </div>
+        </div>
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col gap-6">
+          {/* Top Cards */}
+          <div className="grid grid-cols-3 gap-6">
+            {/* DER Utilization Card */}
+            <div className="bg-[#7B8187] rounded-lg p-6 min-w-[217px] flex flex-col justify-center items-center" style={{height: '217px'}}>
+              <div className="text-white font-bold w-full mb-2" style={{ fontSize: '12px', fontWeight: 700, textAlign: 'left' }}>DER Utilization</div>
+              <div className="flex-1 flex flex-col justify-center items-center w-full">
+                <div className="flex items-center justify-center w-full h-full">
+                  <svg width="80" height="80" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="16" fill="#454B52" />
+                    <circle cx="18" cy="18" r="14" fill="none" stroke="#6ED943" strokeWidth="4" strokeDasharray="44 44" strokeDashoffset="0" />
+                    <circle cx="18" cy="18" r="11" fill="#F8F6E3" />
+                    <text x="18" y="18" dominantBaseline="central" textAnchor="middle" fill="#222" fontSize="5" fontWeight="700">50%</text>
+                  </svg>
+                </div>
+                <div className="flex flex-col gap-1 mt-2 w-full">
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-white" style={{ fontSize: '12px', fontWeight: 700 }}>Current</span>
+                    <span className="text-white" style={{ fontSize: '12px', fontWeight: 700 }}>50 %</span>
+                  </div>
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-white" style={{ fontSize: '12px', fontWeight: 700 }}>Available</span>
+                    <span className="text-white" style={{ fontSize: '12px', fontWeight: 700 }}>93 %</span>
+                  </div>
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-white" style={{ fontSize: '12px', fontWeight: 700 }}>Total</span>
+                    <span className="text-white" style={{ fontSize: '12px', fontWeight: 700 }}>100 %</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* System Load Card */}
+            <div className="bg-[#7B8187] rounded-lg p-6 min-w-[217px] flex flex-col justify-center items-center" style={{height: '217px'}}>
+              <div className="text-white font-bold w-full mb-2" style={{ fontSize: '12px', fontWeight: 700, textAlign: 'left' }}>System Load</div>
+              <div className="flex-1 flex flex-col justify-center items-center w-full">
+                <div className="flex items-center justify-center w-full h-full">
+                  <svg width="80" height="80" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="16" fill="#454B52" />
+                    <circle cx="18" cy="18" r="14" fill="none" stroke="#2563EB" strokeWidth="4" strokeDasharray="44 44" strokeDashoffset="0" />
+                    <circle cx="18" cy="18" r="11" fill="#F8F6E3" />
+                    <text x="18" y="18" dominantBaseline="central" textAnchor="middle" fill="#222" fontSize="5" fontWeight="700">50%</text>
+                  </svg>
+                </div>
+                <div className="flex flex-col gap-1 mt-2 w-full">
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-white" style={{ fontSize: '12px', fontWeight: 700 }}>Current</span>
+                    <span className="text-white" style={{ fontSize: '12px', fontWeight: 700 }}>50 %</span>
+                  </div>
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-white" style={{ fontSize: '12px', fontWeight: 700 }}>Peak</span>
+                    <span className="text-white" style={{ fontSize: '12px', fontWeight: 700 }}>93 %</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Mitigation Events Card */}
+            <div className="bg-[#7B8187] rounded-lg p-6 min-w-[217px] flex flex-col justify-center items-center" style={{height: '217px'}}>
+              <div className="text-white font-bold w-full mb-2" style={{ fontSize: '12px', fontWeight: 700, textAlign: 'left' }}>Mitigation Events</div>
+              <div className="flex-1 flex flex-col justify-center items-center w-full">
+                <div className="flex items-center justify-center w-full h-full">
+                  <div className="w-full h-20 flex items-end justify-center gap-2">
+                    {/* Simple bar chart mockup */}
+                    {[6, 9, 7, 10, 5, 8, 4].map((h, i) => (
+                      <div key={i} className="flex flex-col items-center">
+                        <div className="bg-blue-400 w-4" style={{ height: `${h * 6}px` }}></div>
+                        <div className="bg-orange-400 w-4" style={{ height: `${(12-h) * 2}px` }}></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 grid-rows-2 gap-y-2 mt-2 w-full" style={{ fontSize: '12px', fontWeight: 700 }}>
+                  <span className="text-white text-left">Total 12</span>
+                  <span className="text-white text-left">Success 09</span>
+                  <span className="text-white text-left">Fallback 02</span>
+                  <span className="text-white text-left">Failed 02</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Map and Filters */}
+          <div className="w-full bg-[#7B8187] bg-opacity-80 rounded-xl p-4 mt-2" style={{ height: '59vh' }}>
+            <div className="flex items-center gap-4 justify-between mb-4">
+              <select className="bg-[#454B52] text-white rounded-2xl px-5 py-2 text-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option>Stanford University</option>
+              </select>
+              <div className="flex gap-3">
+                {tabOptions.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveMapTab(tab.key)}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-2xl font-semibold text-base transition border border-gray-300 focus:outline-none ${
+                      activeMapTab === tab.key
+                        ? "bg-blue-600 text-white border-blue-600 shadow"
+                        : "bg-white text-[#222] hover:bg-gray-100"
+                    }`}
+                  >
+                    {tab.icon && <span>{tab.icon}</span>}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="w-full h-80 bg-[#454B52] rounded-xl relative">
+              {/* Map mockup with icons */}
+              <div className="absolute left-1/4 top-1/4"><span className="text-green-400 text-3xl">⚡</span></div>
+              <div className="absolute left-1/2 top-1/3"><span className="text-yellow-400 text-3xl">🛤️</span></div>
+              <div className="absolute left-1/3 top-2/3"><span className="text-blue-400 text-3xl">🏠</span></div>
+              <div className="absolute left-2/3 top-1/2"><span className="text-green-400 text-3xl">⚡</span></div>
+              <div className="absolute left-1/2 top-2/3"><span className="text-yellow-400 text-3xl">🛤️</span></div>
+              <div className="absolute left-1/3 top-1/3"><span className="text-blue-400 text-3xl">🏠</span></div>
+            </div>
+          </div>
+          {/* Utility Agent */}
+          <div className="w-full flex justify-end mt-4">
+            <div className="bg-[#454B52] rounded-full px-4 py-2 flex items-center gap-2 text-white">
+              <span className="bg-blue-400 rounded-full w-8 h-8 flex items-center justify-center">🤖</span>
+              Utility Agent
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+
+  return isLoggedIn ? DashboardPage : LoginPage;
 }
