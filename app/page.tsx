@@ -15,11 +15,10 @@ type Message = {
 
 // Predefined agent responses
 const agentResponses = [
-  "I've scheduled a free site survey for Thursday, 8 May at 10 AM with LightSpark Solar (4.5★ certified).\n\nI've also pre-filled your subsidy applications:\n• 30% Federal Solar Tax Credit\n• CA SGIP Battery Rebate: $1,150\n• Local Rooftop Credit: $300\n• 30% Federal Solar Tax Credit\n• CA SGIP Battery Rebate: $1,150\n• Local Rooftop Credit: $300\n\nAfter your site visit, I'll generate system designs, pricing, and savings estimates.\nWould you like to include battery storage for backup?",
-  "Understood. I've included a 5 kWh battery. I'll also pull installer quotes for setups with backup prioritization.\n\nOnce your system is installed, I'll handle:\n• DER registration with the utility\n• Activation of net metering\n• Setup of flexibility opt-in via Residential Energy Agent\n• Permit sync with city and grid interconnection\nWould you like me to pre-enroll you in demand flexibility now?",
-  "Got it. Your consent setting is now: Manual confirmation required for all flexibility events.\n\nI'll now finalize:\n• Subsidy paperwork\n• Notification to LightSpark for your free site survey\n• A timeline synced with permitting, utility review, and interconnection\nYou'll receive:\n• A dashboard to track each milestone\n• Notifications for key updates\n• Installer options with dynamic reconfiguration\nWould you like weekly check-ins or just major updates?",
-  "Confirmed. I'll notify you next after your site survey. I'll also monitor for any new rebates or system upgrades relevant to your setup.\n\nWelcome to clean, intelligent energy.\nYour installation is now complete and verified. All system components—solar inverter, battery controller, and smart meter—have been registered.\n\n\nI've shared your DER profile with your utility's agent, so your system can now participate in flexibility programs.\nYou'll soon begin receiving notifications from the Residential Energy Agent whenever there's an opportunity to earn rewards by shifting your usage or supporting the grid.\nYou stay in control—every action will still require your approval.\nWould you like me to archive your onboarding journey and forward your data to your residential energy agent dashboard?",
-  "All set. Your setup is now live across the DEG network.\nThanks for choosing Utility-Led Solarization Agent.\n\nYou've just taken the first step toward cleaner power—and smarter participation in the grid of the future."
+  "Here's what I propose:\n\n• Pre-cool your home by 2°F now to reduce AC load during the event\n• Delay EV charging by 45 minutes (impact negligible for next trip)\n• Draw from battery instead of grid power from 6:00–6:30 PM\n• Estimated impact: 2.1 kWh shifted\n• Projected reward: $8.10\n\n⚠️ Your EV charger firmware is slightly outdated. I've applied a conservative delay rule and flagged it for your installer.\n\nApprove this plan?",
+  "Confirmed! Schedule activated, Devices will adjust automatically.\n\nWould you also like to:\n1. Set a monthly earnings goal\n2. Change consent preferences\n3. View live metrics during the event",
+  "Your target is $20/month in flexibility earnings. I'll:\n• Prioritize high-value events\n• Avoid low-value curtailments\n• Optimize battery use accordingly\n\n✅ Event completed.\n2.1 kWh shifted\n💰 You earned $8.10\nAll systems returned to normal\nUtility Grid Agent confirmed successful curtailment on your feeder\nWould you like weekly or monthly summaries?",
+  "Got it. I'll alert you if you fall behind your monthly target."
 ];
 
 export default function Home() {
@@ -28,7 +27,7 @@ export default function Home() {
       id: "1",
       sender: "agent",
       content:
-        "Good morning! Based on your past 12 months of usage and roof geometry, you're an excellent candidate for rooftop solar + battery.\n\nWould you like me to prepare a personalized plan and begin coordination?",
+        "Hi! I've received a flexibility signal from your utility's Utility Grid Agent agent.\nThey've triggered an event for Feeder M12 from 6:00–6:30 PM to prevent a local overload.\n\nI've prepared a response plan. Want to review it?",
     },
   ]);
 
