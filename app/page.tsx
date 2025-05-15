@@ -13,11 +13,27 @@ type Message = {
   timestamp?: string;
 };
 
+// Predefined agent responses
+const agentResponses = [
+  "I've scheduled a free site survey for Thursday, 8 May at 10 AM with LightSpark Solar (4.5★ certified).\n\nI've also pre-filled your subsidy applications:\n• 30% Federal Solar Tax Credit\n• CA SGIP Battery Rebate: $1,150\n• Local Rooftop Credit: $300\n• 30% Federal Solar Tax Credit\n• CA SGIP Battery Rebate: $1,150\n• Local Rooftop Credit: $300\n\nAfter your site visit, I'll generate system designs, pricing, and savings estimates.\nWould you like to include battery storage for backup?",
+  "Understood. I've included a 5 kWh battery. I'll also pull installer quotes for setups with backup prioritization.\n\nOnce your system is installed, I'll handle:\n• DER registration with the utility\n• Activation of net metering\n• Setup of flexibility opt-in via Residential Energy Agent\n• Permit sync with city and grid interconnection\nWould you like me to pre-enroll you in demand flexibility now?",
+  "Got it. Your consent setting is now: Manual confirmation required for all flexibility events.\n\nI'll now finalize:\n• Subsidy paperwork\n• Notification to LightSpark for your free site survey\n• A timeline synced with permitting, utility review, and interconnection\nYou'll receive:\n• A dashboard to track each milestone\n• Notifications for key updates\n• Installer options with dynamic reconfiguration\nWould you like weekly check-ins or just major updates?",
+  "Confirmed. I'll notify you next after your site survey. I'll also monitor for any new rebates or system upgrades relevant to your setup.\n\nWelcome to clean, intelligent energy.\nYour installation is now complete and verified. All system components—solar inverter, battery controller, and smart meter—have been registered.\n\n\nI've shared your DER profile with your utility's agent, so your system can now participate in flexibility programs.\nYou'll soon begin receiving notifications from the Residential Energy Agent whenever there's an opportunity to earn rewards by shifting your usage or supporting the grid.\nYou stay in control—every action will still require your approval.\nWould you like me to archive your onboarding journey and forward your data to your residential energy agent dashboard?",
+  "All set. Your setup is now live across the DEG network.\nThanks for choosing Utility-Led Solarization Agent.\n\nYou've just taken the first step toward cleaner power—and smarter participation in the grid of the future."
+];
+
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [clientId, setClientId] = useState("");
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "1",
+      sender: "agent",
+      content:
+        "Good morning! Based on your past 12 months of usage and roof geometry, you're an excellent candidate for rooftop solar + battery.\n\nWould you like me to prepare a personalized plan and begin coordination?",
+    },
+  ]);
 
   const [inputValue, setInputValue] = useState("");
+  const [responseIndex, setResponseIndex] = useState(0); // Start from the first response
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [isUppercase, setIsUppercase] = useState(true);
@@ -27,84 +43,38 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  const handleSendMessage = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputValue.trim()) return;
-    if (!clientId.trim()) {
-      alert("Please enter a Client ID.");
-      return;
-    }
 
-    const userMessage = {
+    const newMessage = {
       id: Date.now().toString(),
       content: inputValue,
       sender: "user" as const,
-      timestamp: `Read ${new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`,
+      timestamp: `Read ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
     };
 
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    const currentInput = inputValue;
+    setMessages([...messages, newMessage]);
     setInputValue("");
 
     // Simulate agent typing
     setIsTyping(true);
 
     // Send agent response after a delay
-    try {
-      const response = await fetch("http://localhost:8000/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query: currentInput, client_id: clientId }),
-      });
-
+    setTimeout(() => {
       setIsTyping(false);
 
-      if (!response.ok) {
-        console.error("API error:", response.status, await response.text());
-        const errorMessage = {
-          id: (Date.now() + 1).toString(),
-          content: "Sorry, I couldn't get a response. Please try again.",
-          sender: "agent" as const,
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (data && data.message) {
+      if (responseIndex < agentResponses.length) {
         const agentMessage = {
           id: (Date.now() + 1).toString(),
-          content: data.message,
+          content: agentResponses[responseIndex],
           sender: "agent" as const,
         };
+
         setMessages((prev) => [...prev, agentMessage]);
-      } else {
-        console.error("Unexpected API response structure:", data);
-        const errorMessage = {
-          id: (Date.now() + 1).toString(),
-          content:
-            "Sorry, I received an unexpected response. Please try again.",
-          sender: "agent" as const,
-        };
-        setMessages((prev) => [...prev, errorMessage]);
+        setResponseIndex((prev) => prev + 1);
       }
-    } catch (error) {
-      setIsTyping(false);
-      console.error("Failed to send message or fetch response:", error);
-      const errorMessage = {
-        id: (Date.now() + 1).toString(),
-        content:
-          "An error occurred. Please check your connection and try again.",
-        sender: "agent" as const,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    }
+    }, 1500);
   };
 
   // Separate handler for shift (⇧)
@@ -162,8 +132,8 @@ export default function Home() {
         {/* Header */}
         <header className="bg-[#F9F9F9F0] text-[#007AFF] p-4 border-b flex items-center justify-between">
           <ChevronLeft className="h-6 w-6 mr-2" />
-          <div className="flex items-center flex-grow">
-            <div className="flex items-center flex-col mr-4">
+          <div className="flex items-center">
+            <div className="flex items-center flex-col">
               <Image
                 src="/AIBotAvatar.svg"
                 alt="Solarization Agent"
@@ -171,19 +141,12 @@ export default function Home() {
                 height={50}
                 className="rounded-full mr-2"
               />
-              <span className="text-[11px] mt-2 text-center font-['SF_Pro_Text'] font-normal leading-[13px] tracking-[0.066px] text-[#000]">
-                Solarization Agent &gt;
+              <span className="text-[11px] mt-2 text-center font-['SF_Pro_Text'] font-normal leading-[13px] tracking-[0.066px] text-[#000]">Solarization Agent >
+
               </span>
             </div>
-            <input
-              type="text"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              placeholder="Enter Client ID"
-              className="border px-3 py-2 rounded-md flex-grow max-w-xs"
-            />
           </div>
-          <Video className="h-6 w-6 ml-2" />
+          <Video className="h-6 w-6" />
         </header>
 
         {/* Messages */}
@@ -197,9 +160,7 @@ export default function Home() {
                       ? "bg-blue-500 text-white self-end"
                       : "bg-gray-100 text-gray-800 self-start"
                   }`}
-                  style={
-                    message.sender === "agent" ? { whiteSpace: "pre-line" } : {}
-                  }
+                  style={message.sender === "agent" ? { whiteSpace: 'pre-line' } : {}}
                 >
                   {message.content}
                 </div>
@@ -317,9 +278,7 @@ export default function Home() {
                 : letterRows[0].map((key) => (
                     <button
                       key={key}
-                      onClick={() =>
-                        handleKeyPress(isUppercase ? key : key.toLowerCase())
-                      }
+                      onClick={() => handleKeyPress(isUppercase ? key : key.toLowerCase())}
                       className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
                     >
                       {isUppercase ? key : key.toLowerCase()}
@@ -342,9 +301,7 @@ export default function Home() {
                 : letterRows[1].map((key) => (
                     <button
                       key={key}
-                      onClick={() =>
-                        handleKeyPress(isUppercase ? key : key.toLowerCase())
-                      }
+                      onClick={() => handleKeyPress(isUppercase ? key : key.toLowerCase())}
                       className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
                     >
                       {isUppercase ? key : key.toLowerCase()}
@@ -389,9 +346,7 @@ export default function Home() {
                   {letterRows[2].map((key) => (
                     <button
                       key={key}
-                      onClick={() =>
-                        handleKeyPress(isUppercase ? key : key.toLowerCase())
-                      }
+                      onClick={() => handleKeyPress(isUppercase ? key : key.toLowerCase())}
                       className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
                     >
                       {isUppercase ? key : key.toLowerCase()}

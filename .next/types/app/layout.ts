@@ -1,4 +1,4 @@
-// File: /home/aquila/Desktop/CODE/beckn/imessage/imessage/app/layout.tsx
+// File: /Users/shrikrushnagaikwad/Desktop/BEckn/deg_solar_iMessage/deg-agents-ui/app/layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
