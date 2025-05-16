@@ -58,3 +58,6 @@ body {
 .keyword button {
   border-radius: 4px !important;
 }
+.left-card {
+  border-radius: 4px;
+}

@@ -1,4 +1,4 @@
-// File: /Users/shrikrushnagaikwad/Desktop/BEckn/deg_solar_iMessage/deg-agents-ui/app/layout.tsx
+// File: /Users/kundansingh/Desktop/JST Project/Agents/deg-agents-ui/app/layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
