@@ -272,7 +272,7 @@ export default function Home() {
                 className="rounded-full mr-2"
               />
               <span className="text-[11px] mt-2 text-center font-['SF_Pro_Text'] font-normal leading-[13px] tracking-[0.066px] text-[#000]">
-                Solarization Agent &gt;
+                Consumer Agent &gt;
               </span>
             </div>
             <input
