@@ -5,10 +5,12 @@ import { SlEnergy } from "react-icons/sl";
 import { IoHomeOutline } from "react-icons/io5";
 import { PiCarBatteryDuotone } from "react-icons/pi";
 import Image from "next/image";
+import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState("feeder"); // 'feeder' or 'audit'
+  const [showPopover, setShowPopover] = useState(false);
 
   // Tab options for the map filter
   const tabOptions = [
@@ -245,26 +247,77 @@ export default function Home() {
     </div>
   );
 
+  // Google Maps API loader
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: "AIzaSyDj_jBuujsEk8mkIva0xG6_H73oJEytXEA",
+  });
+
+  // Login form state and handlers (moved above LoginPage)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  function validateEmail(email: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function handleSignIn() {
+    let valid = true;
+    setEmailError("");
+    setPasswordError("");
+    if (!email) {
+      setEmailError("Email is required");
+      valid = false;
+    } else if (!validateEmail(email)) {
+      setEmailError("Enter a valid email");
+      valid = false;
+    }
+    if (!password) {
+      setPasswordError("Password is required");
+      valid = false;
+    }
+    if (valid) {
+      setIsLoggedIn(true);
+    }
+  }
+
   // Login Page UI
   const LoginPage = (
     <div className="flex items-center justify-center min-h-screen bg-[#2E343A]">
-      <div className="bg-[#7B8187] bg-opacity-80 rounded-2xl border border-gray-300 shadow-lg p-10 w-full max-w-md flex flex-col items-center left-card">
+      <div className="bg-[#7B8187] bg-opacity-80 border border-gray-300 shadow-lg p-10 w-full max-w-md flex flex-col items-center left-card" style={{borderRadius: "23px !important"}}>
         <div className="mb-6 flex flex-col items-center">
           <div className="bg-white bg-opacity-10 rounded-full p-4 mb-2">
             <svg
-              width="40"
-              height="40"
-              viewBox="0 0 24 24"
+              width="60"
+              height="60"
+              viewBox="0 0 60 60"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                d="M12 2V6M12 18V22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M2 12H6M18 12H22M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93"
-                stroke="#fff"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <g id="Layer_1">
+                <path
+                  id="Vector"
+                  d="M20.92 54.8899C21.06 54.9599 21.22 54.9999 21.37 54.9999C21.67 54.9999 21.97 54.8599 22.16 54.6099L44.63 25.6099C44.86 25.3099 44.91 24.8999 44.74 24.5599C44.57 24.2199 44.22 23.9999 43.84 23.9999H34.65L39.36 6.24991C39.48 5.78991 39.26 5.29991 38.83 5.08991C38.4 4.87991 37.88 4.99991 37.59 5.37991L15.36 34.7199C15.13 35.0199 15.09 35.4299 15.26 35.7699C15.43 36.1099 15.78 36.3299 16.16 36.3299H25.33L20.4 53.7299C20.27 54.1899 20.49 54.6799 20.92 54.8899ZM27.62 35.5999C27.71 35.2999 27.64 34.9699 27.46 34.7199C27.27 34.4699 26.98 34.3199 26.66 34.3199H18.18L36.12 10.6399L32.38 24.7399C32.3 25.0399 32.37 25.3599 32.55 25.6099C32.74 25.8599 33.03 25.9999 33.34 25.9999H41.79L23.73 49.3099L27.62 35.5999Z"
+                  fill="white"
+                  stroke="white"
+                  stroke-width="0.7"
+                />
+                <path
+                  id="Vector_2"
+                  d="M28.68 52.0202C29.12 52.0502 29.56 52.0602 30 52.0602C42.16 52.0602 52.06 42.1602 52.06 30.0002C52.06 22.2302 48.1 15.1802 41.45 11.1402C40.98 10.8502 40.36 11.0002 40.08 11.4702C39.79 11.9402 39.94 12.5602 40.41 12.8402C46.45 16.5202 50.06 22.9302 50.06 29.9902C50.06 41.0502 41.06 50.0502 30 50.0502C29.59 50.0502 29.19 50.0401 28.79 50.0102C28.22 49.9902 27.76 50.4002 27.73 50.9502C27.7 51.5202 28.13 51.9902 28.68 52.0202Z"
+                  fill="white"
+                  stroke="white"
+                  stroke-width="0.7"
+                />
+                <path
+                  id="Vector_3"
+                  d="M18.4 48.7704C18.56 48.8704 18.75 48.9204 18.93 48.9204C19.26 48.9204 19.59 48.7504 19.78 48.4504C20.07 47.9804 19.93 47.3604 19.46 47.0704C13.5 43.3804 9.94 37.0004 9.94 30.0004C9.94 18.9404 18.94 9.94043 30 9.94043C30.36 9.94043 30.71 9.95043 31.06 9.97043C31.61 10.0004 32.08 9.58043 32.11 9.02043C32.14 8.47043 31.72 8.00043 31.16 7.97043C30.78 7.95043 30.39 7.94043 30 7.94043C17.84 7.94043 7.94 17.8404 7.94 30.0004C7.94 37.7004 11.85 44.7104 18.4 48.7704Z"
+                  fill="white"
+                  stroke="white"
+                  stroke-width="0.7"
+                />
+              </g>
             </svg>
           </div>
           <h2
@@ -276,7 +329,13 @@ export default function Home() {
             Administration Portal
           </h2>
         </div>
-        <form className="w-full flex flex-col gap-6">
+        <form
+          className="w-full flex flex-col gap-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSignIn();
+          }}
+        >
           <div className="flex flex-col gap-1">
             <label
               className="text-white mb-1 ml-2"
@@ -288,9 +347,17 @@ export default function Home() {
             <input
               id="email"
               type="email"
-              placeholder=""
-              className="w-full rounded-2xl border-2 border-gray-200 bg-transparent text-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 font-semibold placeholder-white placeholder:font-bold placeholder:text-2xl"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={`w-full rounded-2xl border-2 bg-transparent text-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 font-semibold placeholder-white placeholder:font-bold placeholder:text-2xl ${
+                emailError ? "border-red-500" : "border-gray-200"
+              }`}
             />
+            {emailError && (
+              <span className="text-red-500 text-xs mt-1 ml-2">
+                {emailError}
+              </span>
+            )}
           </div>
           <div className="flex flex-col gap-1">
             <label
@@ -303,9 +370,17 @@ export default function Home() {
             <input
               id="password"
               type="password"
-              placeholder=""
-              className="w-full rounded-2xl border-2 border-gray-200 bg-transparent text-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 font-semibold placeholder-white placeholder:font-bold placeholder:text-2xl"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`w-full rounded-2xl border-2 bg-transparent text-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 font-semibold placeholder-white placeholder:font-bold placeholder:text-2xl ${
+                passwordError ? "border-red-500" : "border-gray-200"
+              }`}
             />
+            {passwordError && (
+              <span className="text-red-500 text-xs mt-1 ml-2">
+                {passwordError}
+              </span>
+            )}
             <div className="flex justify-end mt-1">
               <button
                 type="button"
@@ -316,8 +391,7 @@ export default function Home() {
             </div>
           </div>
           <button
-            type="button"
-            onClick={() => setIsLoggedIn(true)}
+            type="submit"
             className="w-full mt-2 bg-gray-200 text-white py-3 rounded-2xl font-semibold text-sm hover:bg-gray-300 border-2 border-gray-200"
           >
             Sign In
@@ -332,6 +406,19 @@ export default function Home() {
       </div>
     </div>
   );
+
+  // Marker data for the map (example coordinates for Stanford area)
+  const markers = [
+    { type: "feeder", lat: 37.4275, lng: -122.1697, icon: "⚡" },
+    { type: "households", lat: 37.428, lng: -122.17, icon: "🏠" },
+    { type: "substations", lat: 37.429, lng: -122.168, icon: "🗼" },
+    { type: "feeder", lat: 37.426, lng: -122.17, icon: "⚡" },
+    { type: "households", lat: 37.427, lng: -122.171, icon: "🏠" },
+    { type: "substations", lat: 37.4285, lng: -122.169, icon: "🗼" },
+    { type: "feeder", lat: 37.427, lng: -122.168, icon: "⚡" },
+    { type: "households", lat: 37.429, lng: -122.17, icon: "🏠" },
+    { type: "substations", lat: 37.4265, lng: -122.1695, icon: "🗼" },
+  ];
 
   // Dashboard Page UI
   const DashboardPage = (
@@ -383,10 +470,28 @@ export default function Home() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-orange-300 flex items-center justify-center">
-            <span role="img" aria-label="avatar">
-              👤
-            </span>
+          <div className="relative">
+            <div 
+              className="w-10 h-10 rounded-full bg-orange-300 flex items-center justify-center cursor-pointer"
+              onClick={() => setShowPopover(!showPopover)}
+            >
+              <span role="img" aria-label="avatar">
+                👤
+              </span>
+            </div>
+            {showPopover && (
+              <div  style={{borderRadius: "10px !important"}} className="absolute right-0 mt-2 w-48 bg-white shadow-lg py-2 z-50">
+                <button
+                  onClick={() => {
+                    setIsLoggedIn(false);
+                    setShowPopover(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -436,7 +541,12 @@ export default function Home() {
               </div>
               <div className="flex-1 flex flex-col justify-center items-center w-full">
                 <div className="flex items-center justify-center w-full h-full">
-                  <Image src="/progress.svg" width={100} height={100} />
+                  <Image
+                    src="/progress.svg"
+                    width={100}
+                    height={100}
+                    alt="DER Utilization Progress"
+                  />
                 </div>
                 <div className="flex flex-col gap-1 mt-2 w-full">
                   <div className="flex justify-between items-center w-full">
@@ -497,7 +607,12 @@ export default function Home() {
               </div>
               <div className="flex-1 flex flex-col justify-center items-center w-full">
                 <div className="flex items-center justify-center w-full h-full">
-                  <Image src="/progress-1.svg" width={100} height={100} />
+                  <Image
+                    src="/progress-1.svg"
+                    width={100}
+                    height={100}
+                    alt="System Load Progress"
+                  />
                 </div>
                 <div className="flex flex-col gap-1 mt-2 w-full">
                   <div className="flex justify-between items-center w-full">
@@ -558,7 +673,12 @@ export default function Home() {
                         ></div>
                       </div>
                     ))} */}
-                    <Image src="/progress-2.svg" width={160} height={160} />
+                    <Image
+                      src="/progress-2.svg"
+                      width={160}
+                      height={160}
+                      alt="Mitigation Events Progress"
+                    />
                   </div>
                 </div>
                 <div
@@ -575,7 +695,7 @@ export default function Home() {
           </div>
           {/* Map and Filters */}
           <div
-            className="w-full bg-[#7B8187] bg-opacity-80 rounded-xl p-4 mt-2"
+            className="w-full bg-[#7B8187] bg-opacity-80 rounded-[4px] p-4 mt-2"
             style={{ height: "59vh" }}
           >
             <div className="flex items-center gap-4 justify-between mb-4">
@@ -587,7 +707,7 @@ export default function Home() {
                   <button
                     key={tab.key}
                     onClick={() => setActiveMapTab(tab.key)}
-                    className={`flex items-center gap-2 px-5 py-2 rounded-2xl font-semibold text-base transition border border-gray-300 focus:outline-none ${
+                    className={`flex items-center gap-2 px-5 py-2 rounded-[100px] font-semibold text-base transition border border-gray-300 focus:outline-none ${
                       activeMapTab === tab.key
                         ? "bg-blue-600 text-white border-blue-600 shadow"
                         : "bg-white text-[#222] hover:bg-gray-100"
@@ -599,26 +719,57 @@ export default function Home() {
                 ))}
               </div>
             </div>
-            <div className="w-full h-80 bg-[#454B52] rounded-xl relative">
-              {/* Map mockup with icons */}
-              <div className="absolute left-1/4 top-1/4">
-                <span className="text-green-400 text-3xl">⚡</span>
-              </div>
-              <div className="absolute left-1/2 top-1/3">
-                <span className="text-yellow-400 text-3xl">🛤️</span>
-              </div>
-              <div className="absolute left-1/3 top-2/3">
-                <span className="text-blue-400 text-3xl">🏠</span>
-              </div>
-              <div className="absolute left-2/3 top-1/2">
-                <span className="text-green-400 text-3xl">⚡</span>
-              </div>
-              <div className="absolute left-1/2 top-2/3">
-                <span className="text-yellow-400 text-3xl">🛤️</span>
-              </div>
-              <div className="absolute left-1/3 top-1/3">
-                <span className="text-blue-400 text-3xl">🏠</span>
-              </div>
+            <div className="w-full h-[88%] bg-[#454B52] rounded-[4px] relative">
+              {/* Google Map integration */}
+              {isLoaded ? (
+                <GoogleMap
+                  mapContainerStyle={{
+                    width: "100%",
+                    height: "100%",
+                    borderRadius: "0.75rem",
+                  }}
+                  center={{ lat: 37.4275, lng: -122.1697 }}
+                  zoom={16}
+                  options={{
+                    disableDefaultUI: true,
+                    styles: [
+                      {
+                        elementType: "geometry",
+                        stylers: [{ color: "#454B52" }],
+                      },
+                      {
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#ffffff" }],
+                      },
+                      {
+                        elementType: "labels.text.stroke",
+                        stylers: [{ color: "#222222" }],
+                      },
+                    ],
+                  }}
+                >
+                  {markers
+                    .filter(
+                      (marker) =>
+                        activeMapTab === "all" || marker.type === activeMapTab
+                    )
+                    .map((marker, idx) => (
+                      <Marker
+                        key={idx}
+                        position={{ lat: marker.lat, lng: marker.lng }}
+                        label={{
+                          text: marker.icon,
+                          fontSize: "28px",
+                        }}
+                        // Optionally, you can use custom icons here
+                      />
+                    ))}
+                </GoogleMap>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white">
+                  Loading Map...
+                </div>
+              )}
             </div>
           </div>
           {/* Utility Agent */}
