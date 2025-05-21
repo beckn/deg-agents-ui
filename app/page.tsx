@@ -15,10 +15,61 @@ type Message = {
 
 // Predefined agent responses
 const agentResponses = [
-  "🙌 Great! You can contribute by temporarily turning off the following DERs (Distributed Energy Resources) in your home:\n\n1. **HVAC** – 3.5 kW\n2. **Washing Machine** – 1.8 kW\n3. **Dish Washer** – 1.2 kW\n\nWould you like to grant permission for us to remotely control and turn off these devices for a short period?",
-  "✅ Thank you! We've successfully recorded your consent and notified the system operator.",
-  "An update has been shared with the Utility Platform to reflect your participation."
+  `🙌 **Great!** I've prepared a response plan to help achieve the targeted load shifts.  
+  Here are the specific actions proposed:
+  
+ 
+  ❄️ **Pre-cool home by 2°C** (until 6:00 PM)  
+  **Estimated Shift:** 1.8 kWh
+  
+  🚗 **Pause EV Charging** (30 mins, negligible impact — 230 km range left)  
+  **Estimated Shift:** 1.5 kWh
+  
+  🔋 **Use Home Battery** (partial discharge; battery retains 3 hrs backup)  
+  **Estimated Shift:** 1.2 kWh
+  
+ 
+  **🔢 Total Estimated Load Shift:** ~4.5 kWh  
+  **💰 Estimated Earnings:** ~$18.00 (+ eligible 15% monthly bonus)
+  
+  👉 **Would you like to grant permission to activate these scheduled actions?**`,
+  `✅ **Thank you!** We've successfully recorded your consent, activated the scheduled actions,  
+  and notified the utility operator.
+  
+  Would you like to:
+  
+  ● 📌 **Set a monthly earnings goal**  
+  ● ⚙️ **Change consent preferences**  
+  ● 📈 **View live metrics during the event**
+  `,
+
+  `🤖 ** Analyzing... **`,
+
+  `Your historical average earnings are approximately **$36/month**.  
+  To slightly increase your earnings, would you like to set a goal of **$40/month**?
+  
+  This adjustment will prioritize:
+  
+  ● 📅 **High-value events**  
+  ● 📴 **Avoid low-value curtailments**  
+  ● 🔋 **Optimal battery utilization**
+  `,
+
+  `✅ **Event completed successfully.**  
+  ● **Total Load Shifted:** 4.5 kWh  
+  ● 💰 **You earned:** $18.00  
+  ● **Bonus eligibility:** On track for the monthly 15% bonus  
+  ● **All home systems:** Returned to normal  
+  ● **Utility confirmation:** Successful curtailment on Feeder TX005 confirmed  
+  
+  Thank you for supporting grid resilience and sustainability!
+  `,
 ];
+
+// Helper to convert **bold** to <b>bold</b>
+function formatBold(text: string) {
+  return text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+}
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -42,8 +93,19 @@ export default function Home() {
         {
           id: "1",
           sender: "agent",
-          content:
-            "⚠️ Attention! We have detected a grid overload in your area.\nTo help stabilize the grid, we are activating our **Demand Flexibility Program**.\nWould you like to participate?\n\n✅ **Incentives:** Earn $3–4.5 per kWh of reduced consumption\n✅ **Incentives:** 15% bonus if you maintain >90% participation this month.",
+          content: `👋 **Hi!**  
+            I've received a flexibility signal from your utility provider's agent (**P&G Energy**).  
+            They've triggered an event on the feeder you’re connected to from 6:00–6:30 PM to prevent a local overload.
+            
+         
+            ### 📢 Event Details:
+            - ✅ **Reward:** Earn **$4.00 per kWh** of reduced consumption  
+            - ✅ **Bonus:** Additional **15% bonus** if you maintain **>90% participation** this month  
+              _(You've participated in **2 out of 2** previous events this month)_
+            
+         
+            👉 **Would you like to participate?**
+            `,
         },
       ]);
       setIsTyping(false);
@@ -59,7 +121,10 @@ export default function Home() {
       id: Date.now().toString(),
       content: inputValue,
       sender: "user" as const,
-      timestamp: `Read ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      timestamp: `Read ${new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`,
     };
 
     setMessages([...messages, newMessage]);
@@ -82,19 +147,19 @@ export default function Home() {
         setMessages((prev) => [...prev, agentMessage]);
         setResponseIndex((prev) => prev + 1);
 
-        // If this was the "Thank you!" message, auto-send the final message after a delay
-        if (responseIndex === 1 && agentResponses.length > 2) {
+        // If this was the "Analyzing..." message, send the earnings message after 2 seconds
+        if (responseIndex === 2) {
           setIsTyping(true);
           setTimeout(() => {
             setIsTyping(false);
-            const finalAgentMessage = {
+            const earningsMessage = {
               id: (Date.now() + 2).toString(),
-              content: agentResponses[2],
+              content: agentResponses[3],
               sender: "agent" as const,
             };
-            setMessages((prev) => [...prev, finalAgentMessage]);
+            setMessages((prev) => [...prev, earningsMessage]);
             setResponseIndex((prev) => prev + 1);
-          }, 1500);
+          }, 2000);
         }
       }
     }, 1500);
@@ -151,7 +216,10 @@ export default function Home() {
       {/* <div className="w-2 md:w-16 bg-blue-900 border-r border-blue-800"></div> */}
 
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col " style={{maxWidth: '480px', margin: ' 0 auto'}}>
+      <div
+        className="flex-1 flex flex-col "
+        style={{ maxWidth: "440px", margin: " 0 auto" }}
+      >
         {/* Header */}
         <header className="bg-[#F9F9F9F0] text-[#007AFF] p-4 border-b flex items-center justify-between">
           <ChevronLeft className="h-6 w-6 mr-2" />
@@ -164,7 +232,9 @@ export default function Home() {
                 height={50}
                 className="rounded-full mr-2"
               />
-              <span className="text-[11px] mt-2 text-center font-['SF_Pro_Text'] font-normal leading-[13px] tracking-[0.066px] text-[#000]">Consumer Agent {'>'}</span>
+              <span className="text-[11px] mt-2 text-center font-['SF_Pro_Text'] font-normal leading-[13px] tracking-[0.066px] text-[#000]">
+                Consumer Agent {">"}
+              </span>
             </div>
           </div>
           <Video className="h-6 w-6" />
@@ -181,9 +251,18 @@ export default function Home() {
                       ? "bg-blue-500 text-white self-end"
                       : "bg-gray-100 text-gray-800 self-start"
                   }`}
-                  style={message.sender === "agent" ? { whiteSpace: 'pre-line' } : {}}
+                  style={
+                    message.sender === "agent" ? { whiteSpace: "pre-line" } : {}
+                  }
+                  {...(message.sender === "agent"
+                    ? {
+                        dangerouslySetInnerHTML: {
+                          __html: formatBold(message.content as string),
+                        },
+                      }
+                    : {})}
                 >
-                  {message.content}
+                  {message.sender === "user" ? message.content : null}
                 </div>
                 {message.timestamp && (
                   <span
@@ -228,9 +307,9 @@ export default function Home() {
         <form
           onSubmit={handleSendMessage}
           className="flex items-center p-2 bg-gray-100 justify-between"
-          style={{width: '100%'}}
+          style={{ width: "100%" }}
         >
-          <div className="flex items-center mb-2 mr-4 ml-4">
+          <div className="flex items-center mb-2 mr-4 ml-4 w-[100%]">
             <Image
               src={"/Camera.svg"}
               alt="Solarization Agent"
@@ -300,7 +379,9 @@ export default function Home() {
                 : letterRows[0].map((key) => (
                     <button
                       key={key}
-                      onClick={() => handleKeyPress(isUppercase ? key : key.toLowerCase())}
+                      onClick={() =>
+                        handleKeyPress(isUppercase ? key : key.toLowerCase())
+                      }
                       className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
                     >
                       {isUppercase ? key : key.toLowerCase()}
@@ -323,7 +404,9 @@ export default function Home() {
                 : letterRows[1].map((key) => (
                     <button
                       key={key}
-                      onClick={() => handleKeyPress(isUppercase ? key : key.toLowerCase())}
+                      onClick={() =>
+                        handleKeyPress(isUppercase ? key : key.toLowerCase())
+                      }
                       className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
                     >
                       {isUppercase ? key : key.toLowerCase()}
@@ -368,7 +451,9 @@ export default function Home() {
                   {letterRows[2].map((key) => (
                     <button
                       key={key}
-                      onClick={() => handleKeyPress(isUppercase ? key : key.toLowerCase())}
+                      onClick={() =>
+                        handleKeyPress(isUppercase ? key : key.toLowerCase())
+                      }
                       className="w-8 h-10 bg-white rounded-lg shadow flex items-center justify-center m-0.5 active:bg-gray-300"
                     >
                       {isUppercase ? key : key.toLowerCase()}
