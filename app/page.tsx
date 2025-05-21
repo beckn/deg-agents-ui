@@ -17,14 +17,17 @@ type Message = {
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [clientId, setClientId] = useState("");
-
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [isUppercase, setIsUppercase] = useState(true);
   const [isNumeric, setIsNumeric] = useState(false);
-  const [lastPollTime, setLastPollTime] = useState<number>(0);
   const [hasShownMessages, setHasShownMessages] = useState(false);
+  
+  // WebSocket related state
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [authState, setAuthState] = useState<'initial' | 'meter_id_required' | 'otp_required' | 'authenticated'>('initial');
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -35,8 +38,6 @@ export default function Home() {
       if (hasShownMessages) return;
       
       const cachedData = webhookCache.getAll();
-
-      console.log("Dank",cachedData);
       
       if (cachedData && cachedData.length > 0) {
         const systemMessages: Message[] = [
@@ -68,143 +69,205 @@ export default function Home() {
     checkWebhookData();
   }, [hasShownMessages]);
 
+  // WebSocket connection setup
   useEffect(() => {
-    const pollInterval = 5000;
-
-    const pollWebhook = async () => {
-      if (hasShownMessages) return;
+    const socket = new WebSocket(process.env.NEXT_PUBLIC_WEBSOCKET_URL!);
+    
+    socket.onopen = () => {
+      console.log('WebSocket Connected');
+      setWs(socket);
+      setAuthState('meter_id_required');
       
-      try {
-        const response = await fetch('/api/webhook', {
-          method: 'GET',
-        });
-
-        if (!response.ok) {
-          console.error('Polling failed:', response.status);
-          return;
-        }
-
-        const data = await response.json();
-        
-        // Only show messages if we actually have cached data
-        if (data.data && data.data.length > 0) {
-          const currentTime = Date.now();
-          
-          const systemMessages: Message[] = [
-            {
-              id: `system-1-${currentTime}`,
-              content: "Your household is consuming more energy",
-              sender: "agent",
-              timestamp: new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-            },
-            {
-              id: `system-2-${currentTime + 1}`,
-              content: "Since you are registered to the DFP program, we have subscribed you for the updates",
-              sender: "agent",
-              timestamp: new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-            }
-          ];
-
-          setMessages(prev => [...prev, ...systemMessages]);
-          setHasShownMessages(true);
-          setLastPollTime(currentTime);
-          return;
-        }
-      } catch (error) {
-        console.error('Error polling webhook:', error);
-      }
+      // Add a system message to prompt for meter ID
+      const systemMessage = {
+        id: `system-auth-${Date.now()}`,
+        content: "Please enter your meter ID to begin",
+        sender: "agent" as const,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages(prev => [...prev, systemMessage]);
     };
 
-    if (!hasShownMessages) {
-      const pollTimer = setInterval(pollWebhook, pollInterval);
-      return () => clearInterval(pollTimer);
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      handleWebSocketMessage(data);
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket Disconnected');
+      setWs(null);
+      setAuthState('initial');
+      
+      // Add a system message about disconnection
+      const systemMessage = {
+        id: `system-disconnect-${Date.now()}`,
+        content: "Connection lost. Please refresh the page to reconnect.",
+        sender: "agent" as const,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages(prev => [...prev, systemMessage]);
+    };
+
+    socket.onerror = (error) => {
+      console.error('WebSocket Error:', error);
+      
+      // Add a system message about error
+      const systemMessage = {
+        id: `system-error-${Date.now()}`,
+        content: "Connection error. Please check your internet connection and try again.",
+        sender: "agent" as const,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages(prev => [...prev, systemMessage]);
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, []);
+
+  // Handler for WebSocket messages
+  const handleWebSocketMessage = (data: any) => {
+    // Turn typing indicator ON when server is processing
+    if (data.status === 'processing') {
+      setIsTyping(true);
+      return; // Don't add a message for processing status
     }
-  }, [lastPollTime, hasShownMessages]);
+    
+    // Turn typing indicator OFF for all other message types
+    setIsTyping(false);
+    
+    if (data.status === 'auth_required') {
+      setAuthState(data.auth_state);
+      
+      // Set client ID from response if available
+      if (data.client_id && !clientId) {
+        setClientId(data.client_id);
+      }
+      
+      const promptMessage = {
+        id: `auth-prompt-${Date.now()}`,
+        content: data.message || (data.auth_state === 'otp_required' ? 
+          "Please enter the 6-digit OTP sent to your registered device" : 
+          "Please enter your meter ID"),
+        sender: "agent" as const,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages(prev => [...prev, promptMessage]);
+      
+    } else if (data.status === 'auth_success') {
+      setToken(data.token);
+      setAuthState('authenticated');
+      
+      const successMessage = {
+        id: `auth-success-${Date.now()}`,
+        content: data.message || "Authentication successful. You can now chat with the agent.",
+        sender: "agent" as const,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages(prev => [...prev, successMessage]);
+      
+    } else if (data.status === 'auth_failed') {
+      const failureMessage = {
+        id: `auth-failed-${Date.now()}`,
+        content: data.message || "Authentication failed. Please try again.",
+        sender: "agent" as const,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages(prev => [...prev, failureMessage]);
+      
+    } else if (data.status === 'success') {
+      const agentMessage = {
+        id: `agent-${Date.now()}`,
+        content: data.message,
+        sender: "agent" as const,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages(prev => [...prev, agentMessage]);
+      
+    } else if (data.status === 'error') {
+      const errorMessage = {
+        id: `error-${Date.now()}`,
+        content: data.message || "An error occurred. Please try again.",
+        sender: "agent" as const,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
+  };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputValue.trim()) return;
-    if (!clientId.trim()) {
-      alert("Please enter a Client ID.");
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      const errorMessage = {
+        id: `connection-error-${Date.now()}`,
+        content: "Connection not available. Please refresh the page.",
+        sender: "agent" as const,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages(prev => [...prev, errorMessage]);
       return;
     }
 
+    // Create and send user message
     const userMessage = {
       id: Date.now().toString(),
       content: inputValue,
       sender: "user" as const,
-      timestamp: `Read ${new Date().toLocaleTimeString([], {
+      timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
-      })}`,
+      }),
     };
-
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    const currentInput = inputValue;
-    setInputValue("");
-
-    // Simulate agent typing
-    setIsTyping(true);
-
-    // Send agent response after a delay
-    try {
-      const response = await fetch(process.env.NEXT_PUBLIC_CHAT_API_URL! + "/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query: currentInput, client_id: clientId }),
-      });
-
-      setIsTyping(false);
-
-      if (!response.ok) {
-        console.error("API error:", response.status, await response.text());
-        const errorMessage = {
-          id: (Date.now() + 1).toString(),
-          content: "Sorry, I couldn't get a response. Please try again.",
-          sender: "agent" as const,
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (data && data.message) {
-        const agentMessage = {
-          id: (Date.now() + 1).toString(),
-          content: data.message,
-          sender: "agent" as const,
-        };
-        setMessages((prev) => [...prev, agentMessage]);
-      } else {
-        console.error("Unexpected API response structure:", data);
-        const errorMessage = {
-          id: (Date.now() + 1).toString(),
-          content:
-            "Sorry, I received an unexpected response. Please try again.",
-          sender: "agent" as const,
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-      }
-    } catch (error) {
-      setIsTyping(false);
-      console.error("Failed to send message or fetch response:", error);
-      const errorMessage = {
-        id: (Date.now() + 1).toString(),
-        content:
-          "An error occurred. Please check your connection and try again.",
-        sender: "agent" as const,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+    setMessages(prev => [...prev, userMessage]);
+    
+    // Prepare WebSocket message
+    const message = {
+      client_id: clientId || inputValue, // Use input as client_id if not set yet
+      query: inputValue
+    };
+    
+    // If this is the first message and we're in meter_id_required state,
+    // set the client ID from the input
+    if (authState === 'meter_id_required' && !clientId) {
+      setClientId(inputValue);
     }
+    
+    setInputValue("");
+    
+    // Don't set typing indicator here - wait for processing status from server
+    // setIsTyping(true); - removed
+    
+    // Send message to WebSocket
+    ws.send(JSON.stringify(message));
   };
 
   // Separate handler for shift (⇧)
@@ -275,13 +338,7 @@ export default function Home() {
                 Consumer Agent &gt;
               </span>
             </div>
-            <input
-              type="text"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              placeholder="Enter Client ID"
-              className="border px-3 py-2 rounded-md flex-grow max-w-xs"
-            />
+            
           </div>
           <Video className="h-6 w-6 ml-2" />
         </header>
