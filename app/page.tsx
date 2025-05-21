@@ -93,7 +93,7 @@ export default function Home() {
         {
           id: "1",
           sender: "agent",
-          content: `👋 **Hi Jason's!**  
+          content: `👋 **Hi Jason!**  
             I've received a flexibility signal from your utility provider's agent (**P&G Energy**).  
             They've triggered an event on the feeder you’re connected to from 6:00–6:30 PM to prevent a local overload.
             
