@@ -15,33 +15,41 @@ type Message = {
 
 // Predefined agent responses
 const agentResponses = [
-  "I've scheduled a free site survey for Thursday, 8 May at 10 AM with LightSpark Solar (4.5★ certified).\n\nI've also pre-filled your subsidy applications:\n• 30% Federal Solar Tax Credit\n• CA SGIP Battery Rebate: $1,150\n• Local Rooftop Credit: $300\n• 30% Federal Solar Tax Credit\n• CA SGIP Battery Rebate: $1,150\n• Local Rooftop Credit: $300\n\nAfter your site visit, I'll generate system designs, pricing, and savings estimates.\nWould you like to include battery storage for backup?",
-  "Understood. I've included a 5 kWh battery. I'll also pull installer quotes for setups with backup prioritization.\n\nOnce your system is installed, I'll handle:\n• DER registration with the utility\n• Activation of net metering\n• Setup of flexibility opt-in via Residential Energy Agent\n• Permit sync with city and grid interconnection\nWould you like me to pre-enroll you in demand flexibility now?",
-  "Got it. Your consent setting is now: Manual confirmation required for all flexibility events.\n\nI'll now finalize:\n• Subsidy paperwork\n• Notification to LightSpark for your free site survey\n• A timeline synced with permitting, utility review, and interconnection\nYou'll receive:\n• A dashboard to track each milestone\n• Notifications for key updates\n• Installer options with dynamic reconfiguration\nWould you like weekly check-ins or just major updates?",
-  "Confirmed. I'll notify you next after your site survey. I'll also monitor for any new rebates or system upgrades relevant to your setup.\n\nWelcome to clean, intelligent energy.\nYour installation is now complete and verified. All system components—solar inverter, battery controller, and smart meter—have been registered.\n\n\nI've shared your DER profile with your utility's agent, so your system can now participate in flexibility programs.\nYou'll soon begin receiving notifications from the Residential Energy Agent whenever there's an opportunity to earn rewards by shifting your usage or supporting the grid.\nYou stay in control—every action will still require your approval.\nWould you like me to archive your onboarding journey and forward your data to your residential energy agent dashboard?",
-  "All set. Your setup is now live across the DEG network.\nThanks for choosing Utility-Led Solarization Agent.\n\nYou've just taken the first step toward cleaner power—and smarter participation in the grid of the future."
+  "🙌 Great! You can contribute by temporarily turning off the following DERs (Distributed Energy Resources) in your home:\n\n1. **HVAC** – 3.5 kW\n2. **Washing Machine** – 1.8 kW\n3. **Dish Washer** – 1.2 kW\n\nWould you like to grant permission for us to remotely control and turn off these devices for a short period?",
+  "✅ Thank you! We've successfully recorded your consent and notified the system operator.",
+  "An update has been shared with the Utility Platform to reflect your participation."
 ];
 
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      sender: "agent",
-      content:
-        "Good morning! Based on your past 12 months of usage and roof geometry, you're an excellent candidate for rooftop solar + battery.\n\nWould you like me to prepare a personalized plan and begin coordination?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
 
   const [inputValue, setInputValue] = useState("");
   const [responseIndex, setResponseIndex] = useState(0); // Start from the first response
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isTyping, setIsTyping] = useState(false);
+  const [isTyping, setIsTyping] = useState(true); // Start as true for initial typing
   const [isUppercase, setIsUppercase] = useState(true);
   const [isNumeric, setIsNumeric] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    // Show the first agent message after 10 seconds
+    setIsTyping(true);
+    const timer = setTimeout(() => {
+      setMessages([
+        {
+          id: "1",
+          sender: "agent",
+          content:
+            "⚠️ Attention! We have detected a grid overload in your area.\nTo help stabilize the grid, we are activating our **Demand Flexibility Program**.\nWould you like to participate?\n\n✅ **Incentives:** Earn $3–4.5 per kWh of reduced consumption\n✅ **Incentives:** 15% bonus if you maintain >90% participation this month.",
+        },
+      ]);
+      setIsTyping(false);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSendMessage = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -73,6 +81,21 @@ export default function Home() {
 
         setMessages((prev) => [...prev, agentMessage]);
         setResponseIndex((prev) => prev + 1);
+
+        // If this was the "Thank you!" message, auto-send the final message after a delay
+        if (responseIndex === 1 && agentResponses.length > 2) {
+          setIsTyping(true);
+          setTimeout(() => {
+            setIsTyping(false);
+            const finalAgentMessage = {
+              id: (Date.now() + 2).toString(),
+              content: agentResponses[2],
+              sender: "agent" as const,
+            };
+            setMessages((prev) => [...prev, finalAgentMessage]);
+            setResponseIndex((prev) => prev + 1);
+          }, 1500);
+        }
       }
     }, 1500);
   };
@@ -128,7 +151,7 @@ export default function Home() {
       {/* <div className="w-2 md:w-16 bg-blue-900 border-r border-blue-800"></div> */}
 
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col ">
+      <div className="flex-1 flex flex-col " style={{maxWidth: '480px', margin: ' 0 auto'}}>
         {/* Header */}
         <header className="bg-[#F9F9F9F0] text-[#007AFF] p-4 border-b flex items-center justify-between">
           <ChevronLeft className="h-6 w-6 mr-2" />
@@ -136,14 +159,12 @@ export default function Home() {
             <div className="flex items-center flex-col">
               <Image
                 src="/AIBotAvatar.svg"
-                alt="Solarization Agent"
+                alt="Consumer Agent"
                 width={50}
                 height={50}
                 className="rounded-full mr-2"
               />
-              <span className="text-[11px] mt-2 text-center font-['SF_Pro_Text'] font-normal leading-[13px] tracking-[0.066px] text-[#000]">Solarization Agent >
-
-              </span>
+              <span className="text-[11px] mt-2 text-center font-['SF_Pro_Text'] font-normal leading-[13px] tracking-[0.066px] text-[#000]">Consumer Agent {'>'}</span>
             </div>
           </div>
           <Video className="h-6 w-6" />
@@ -207,6 +228,7 @@ export default function Home() {
         <form
           onSubmit={handleSendMessage}
           className="flex items-center p-2 bg-gray-100 justify-between"
+          style={{width: '100%'}}
         >
           <div className="flex items-center mb-2 mr-4 ml-4">
             <Image
@@ -223,7 +245,7 @@ export default function Home() {
               height={32}
               className="mr-2"
             />
-            <div className=" flex items-center bg-white rounded-full border  px-3 py-2 justify-between w-[80vw] ">
+            <div className=" flex items-center bg-white rounded-full border  px-3 py-2 justify-between w-[100%]">
               <input
                 type="text"
                 value={inputValue}

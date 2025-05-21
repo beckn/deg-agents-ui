@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Solarization Agent Chat",
+  title: "ConsumerAgent Chat",
   description: "Interactive mobile chat interface for solar energy consultation",
     generator: 'v0.dev'
 }

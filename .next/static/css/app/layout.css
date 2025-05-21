@@ -969,6 +969,12 @@ video {
 .w-px {
   width: 1px;
 }
+.w-\[480px\] {
+  width: 480px;
+}
+.w-\[100\%\] {
+  width: 100%;
+}
 .min-w-0 {
   min-width: 0px;
 }
