@@ -7,6 +7,7 @@ import { Camera, Mic, ChevronLeft, Video, Smile } from "lucide-react";
 import Image from "next/image";
 import { webhookCache } from '@/app/utils/cache'
 
+
 type Message = {
   id: string;
   content: string | React.ReactNode;
@@ -137,6 +138,8 @@ export default function Home() {
 
   // Handler for WebSocket messages
   const handleWebSocketMessage = (data: any) => {
+    if (data.type === "ping") return; // Ignore ping messages
+
     // Turn typing indicator ON when server is processing
     if (data.status === 'processing') {
       setIsTyping(true);
@@ -321,26 +324,27 @@ export default function Home() {
       {/* <div className="w-2 md:w-16 bg-blue-900 border-r border-blue-800"></div> */}
 
       {/* Main chat area */}
-      <div className="flex-1 flex flex-col ">
+      <div className="flex-1 flex flex-col  " style={{maxWidth:'430px', margin:'0 auto'}}>
         {/* Header */}
-        <header className="bg-[#F9F9F9F0] text-[#007AFF] p-4 border-b flex items-center justify-between">
-          <ChevronLeft className="h-6 w-6 mr-2" />
-          <div className="flex items-center flex-grow">
-            <div className="flex items-center flex-col mr-4">
-              <Image
-                src="/AIBotAvatar.svg"
-                alt="Solarization Agent"
-                width={50}
-                height={50}
-                className="rounded-full mr-2"
-              />
-              <span className="text-[11px] mt-2 text-center font-['SF_Pro_Text'] font-normal leading-[13px] tracking-[0.066px] text-[#000]">
-                Consumer Agent &gt;
-              </span>
-            </div>
-            
+        <header className="bg-[#F9F9F9F0] text-[#007AFF] p-4 border-b grid grid-cols-3 items-center">
+          <div className="justify-self-start">
+            <ChevronLeft className="h-6 w-6 mr-2" />
           </div>
-          <Video className="h-6 w-6 ml-2" />
+          <div className="flex flex-col items-center justify-self-center">
+            <Image
+              src="/AIBotAvatar.svg"
+              alt="Consumer Agent"
+              width={50}
+              height={50}
+              className="rounded-full mb-1"
+            />
+            <span className="text-[11px] mt-2 text-center font-['SF_Pro_Text'] font-normal leading-[13px] tracking-[0.066px] text-[#000]">
+              Consumer Agent &gt;
+            </span>
+          </div>
+          <div className="justify-self-end">
+            <Video className="h-6 w-6 ml-2" />
+          </div>
         </header>
 
         {/* Messages */}
@@ -399,36 +403,40 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Input area */}
+        {/* Input area above app shortcuts */}
         <form
           onSubmit={handleSendMessage}
-          className="flex items-center p-2 bg-gray-100 justify-between"
+          className="flex items-center p-2 bg-gray-100"
+          style={{ width: "100%" }}
         >
-          <div className="flex items-center mb-2 mr-4 ml-4">
-            <Image
-              src={"/Camera.svg"}
-              alt="Solarization Agent"
-              width={38}
-              height={32}
-              className="mr-2"
+          {/* Camera and App Store icons */}
+          <Image
+            src={"/Camera.svg"}
+            alt="Camera"
+            width={32}
+            height={32}
+            className="mr-2"
+          />
+          <Image
+            src={"/Apps.svg"}
+            alt="Apps"
+            width={32}
+            height={32}
+            className="mr-2"
+          />
+
+          {/* Input and mic icon */}
+          <div className="flex items-center bg-white rounded-full border border-gray-300 px-3 py-2 flex-1">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="iMessage"
+              className="flex-1 outline-none bg-transparent text-gray-600"
             />
-            <Image
-              src={"/Apps.svg"}
-              alt="Solarization Agent"
-              width={38}
-              height={32}
-              className="mr-2"
-            />
-            <div className=" flex items-center bg-white rounded-full border  px-3 py-2 justify-between w-[80vw] ">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="iMessage"
-                className="flex-1 outline-none bg-transparent"
-              />
-              <Mic className="h-5 w-5 text-gray-500 ml-2" />
-            </div>
+            <button className="focus:outline-none">
+              <Mic className="h-5 w-5 text-gray-400 ml-2" />
+            </button>
           </div>
         </form>
         <div className="bg-gray-100 border-t border-gray-300">
